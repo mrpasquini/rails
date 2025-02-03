@@ -148,6 +148,46 @@ module ActiveStorage
       @public
     end
 
+    def base64digest(io, algorithm: :MD5, include_algorithm: false, **)
+      digest = checksum_implementation(algorithm).base64digest(io)
+      if include_algorithm
+        "#{algorithm}:#{digest}"
+      else
+        digest
+      end
+    end
+
+    def base64file(file, algorithm: :MD5, include_algorithm: false, **)
+      digest = checksum_implementation(algorithm).file(file).base64digest
+      if include_algorithm
+        "#{algorithm}:#{digest}"
+      else
+        digest
+      end
+    end
+
+    def compute_checksum_in_chunks(io, algorithm: :MD5, include_algorithm: false, **)
+      raise ArgumentError, "io must be rewindable" unless io.respond_to?(:rewind)
+
+      digest = checksum_implementation(algorithm).new.tap do |checksum|
+        read_buffer = "".b
+        while io.read(5.megabytes, read_buffer)
+          checksum << read_buffer
+        end
+
+        io.rewind
+      end.base64digest
+      if include_algorithm
+        "#{algorithm}:#{digest}"
+      else
+        digest
+      end
+    end
+
+    def checksum_implementation(algorithm = :MD5, **)
+      ActiveStorage.checksum_implementation
+    end
+
     private
       def private_url(key, expires_in:, filename:, disposition:, content_type:, **)
         raise NotImplementedError
