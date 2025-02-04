@@ -23,7 +23,12 @@ if SERVICE_CONFIGURATIONS[:gcs]
       request = Net::HTTP::Put.new uri.request_uri
       request.body = data
       request.add_field "Content-Type", ""
-      request.add_field "Content-MD5", checksum.digest
+      if checksum.algorithm == :MD5
+        request.add_field "Content-MD5", checksum.digest
+      else
+        request.add_field "x-goog-hash", "#{checksum.algorithm}=#{checksum.digest}"
+      end
+
       Net::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|
         http.request request
       end
@@ -180,7 +185,11 @@ if SERVICE_CONFIGURATIONS[:gcs]
         request = Net::HTTP::Put.new(uri.request_uri)
         request.body = data
         request.add_field("Content-Type", "")
-        request.add_field("Content-MD5", checksum.digest)
+        if checksum.algorithm == :MD5
+          request.add_field "Content-MD5", checksum.digest
+        else
+          request.add_field "x-goog-hash", "#{checksum.algorithm}=#{checksum.digest}"
+        end
         Net::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|
           http.request request
         end
