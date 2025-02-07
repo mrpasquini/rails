@@ -95,7 +95,7 @@ module ActiveStorage
       end
     end
 
-    def url_for_direct_upload(key, expires_in:, content_type:, content_length:, checksum:, custom_metadata: {})
+    def url_for_direct_upload(key, expires_in:, content_type:, content_length:, checksum:, checksum_algorithm: :MD5, custom_metadata: {})
       instrument :url, key: key do |payload|
         generated_url = signer.signed_uri(
           uri_for(key), false,
@@ -110,7 +110,7 @@ module ActiveStorage
       end
     end
 
-    def headers_for_direct_upload(key, content_type:, checksum:, filename: nil, disposition: nil, custom_metadata: {}, **)
+    def headers_for_direct_upload(key, content_type:, checksum:, checksum_algorithm: :MD5, filename: nil, disposition: nil, custom_metadata: {}, **)
       content_disposition = content_disposition_with(type: disposition, filename: filename) if filename
 
       { "Content-Type" => content_type, "Content-MD5" => checksum, "x-ms-blob-content-disposition" => content_disposition, "x-ms-blob-type" => "BlockBlob", **custom_metadata_headers(custom_metadata) }

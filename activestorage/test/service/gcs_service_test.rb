@@ -17,13 +17,13 @@ if SERVICE_CONFIGURATIONS[:gcs]
       key      = SecureRandom.base58(24)
       data     = "Something else entirely!"
       checksum = @service.base64digest(data)
-      url      = @service.url_for_direct_upload(key, expires_in: 5.minutes, content_type: "text/plain", content_length: data.size, checksum: checksum)
+      url      = @service.url_for_direct_upload(key, expires_in: 5.minutes, content_type: "text/plain", content_length: data.size, checksum: checksum.digest, checksum_algorithm: checksum.algorithm)
 
       uri = URI.parse url
       request = Net::HTTP::Put.new uri.request_uri
       request.body = data
       request.add_field "Content-Type", ""
-      request.add_field "Content-MD5", checksum
+      request.add_field "Content-MD5", checksum.to_s
       Net::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|
         http.request request
       end
@@ -37,12 +37,12 @@ if SERVICE_CONFIGURATIONS[:gcs]
       key      = SecureRandom.base58(24)
       data     = "Something else entirely!"
       checksum = @service.base64digest(data)
-      url      = @service.url_for_direct_upload(key, expires_in: 5.minutes, content_type: "text/plain", content_length: data.size, checksum: checksum)
+      url      = @service.url_for_direct_upload(key, expires_in: 5.minutes, content_type: "text/plain", content_length: data.size, checksum: checksum.digest, checksum_algorithm: checksum.algorithm)
 
       uri = URI.parse url
       request = Net::HTTP::Put.new uri.request_uri
       request.body = data
-      @service.headers_for_direct_upload(key, checksum: checksum, filename: ActiveStorage::Filename.new("test.txt"), disposition: :attachment).each do |k, v|
+      @service.headers_for_direct_upload(key, checksum: checksum.digest, checksum_algorithm: checksum.algorithm, filename: ActiveStorage::Filename.new("test.txt"), disposition: :attachment).each do |k, v|
         request.add_field k, v
       end
       request.add_field "Content-Type", ""
@@ -63,13 +63,13 @@ if SERVICE_CONFIGURATIONS[:gcs]
 
       key      = SecureRandom.base58(24)
       data     = "Some text"
-      checksum = Digest::MD5.base64digest(data)
-      url      = service.url_for_direct_upload(key, expires_in: 5.minutes, content_type: "text/plain", content_length: data.size, checksum: checksum)
+      checksum = service.base64digest(data)
+      url      = service.url_for_direct_upload(key, expires_in: 5.minutes, content_type: "text/plain", content_length: data.size, checksum: checksum.digest, checksum_algorithm: checksum.algorithm)
 
       uri = URI.parse url
       request = Net::HTTP::Put.new uri.request_uri
       request.body = data
-      headers = service.headers_for_direct_upload(key, checksum: checksum, filename: ActiveStorage::Filename.new("test.txt"), disposition: :attachment)
+      headers = service.headers_for_direct_upload(key, checksum: checksum.digest, checksum_algorithm: checksum.algorithm, filename: ActiveStorage::Filename.new("test.txt"), disposition: :attachment)
       assert_equal("public, max-age=1800", headers["Cache-Control"])
 
       headers.each do |k, v|
@@ -173,14 +173,14 @@ if SERVICE_CONFIGURATIONS[:gcs]
 
         key      = SecureRandom.base58(24)
         data     = "Some text"
-        checksum = Digest::MD5.base64digest(data)
-        url      = service.url_for_direct_upload(key, expires_in: 5.minutes, content_type: "text/plain", content_length: data.size, checksum: checksum)
+        checksum = service.base64digest(data)
+        url      = service.url_for_direct_upload(key, expires_in: 5.minutes, content_type: "text/plain", content_length: data.size, checksum: checksum.digest, checksum_algorithm: checksum.algorithm)
 
         uri = URI.parse(url)
         request = Net::HTTP::Put.new(uri.request_uri)
         request.body = data
         request.add_field("Content-Type", "")
-        request.add_field("Content-MD5", checksum)
+        request.add_field("Content-MD5", checksum.to_s)
         Net::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|
           http.request request
         end

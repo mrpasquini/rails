@@ -21,6 +21,7 @@ class ActiveStorage::Blob < ActiveStorage::Record
 
   has_secure_token :key, length: MINIMUM_TOKEN_LENGTH
   store :metadata, accessors: [ :analyzed, :identified, :composed ], coder: ActiveRecord::Coders::JSON
+  serialize :checksum, coder: ActiveStorage::Checksum
 
   class_attribute :services, default: {}
   class_attribute :service, instance_accessor: false
@@ -219,12 +220,12 @@ class ActiveStorage::Blob < ActiveStorage::Record
   # Returns a URL that can be used to directly upload a file for this blob on the service. This URL is intended to be
   # short-lived for security and only generated on-demand by the client-side JavaScript responsible for doing the uploading.
   def service_url_for_direct_upload(expires_in: ActiveStorage.service_urls_expire_in)
-    service.url_for_direct_upload key, expires_in: expires_in, content_type: content_type, content_length: byte_size, checksum: checksum, custom_metadata: custom_metadata
+    service.url_for_direct_upload key, expires_in: expires_in, content_type: content_type, content_length: byte_size, checksum: checksum&.digest, checksum_algorithm: checksum&.algorithm, custom_metadata: custom_metadata
   end
 
   # Returns a Hash of headers for +service_url_for_direct_upload+ requests.
   def service_headers_for_direct_upload
-    service.headers_for_direct_upload key, filename: filename, content_type: content_type, content_length: byte_size, checksum: checksum, custom_metadata: custom_metadata
+    service.headers_for_direct_upload key, filename: filename, content_type: content_type, content_length: byte_size, checksum: checksum&.digest, checksum_algorithm: checksum&.algorithm, custom_metadata: custom_metadata
   end
 
 
@@ -253,7 +254,7 @@ class ActiveStorage::Blob < ActiveStorage::Record
   end
 
   def upload_without_unfurling(io) # :nodoc:
-    service.upload key, io, checksum: checksum, **service_metadata
+    service.upload key, io, checksum: checksum&.digest, checksum_algorithm: checksum&.algorithm, **service_metadata
   end
 
   def compose(keys) # :nodoc:
@@ -288,7 +289,8 @@ class ActiveStorage::Blob < ActiveStorage::Record
   def open(tmpdir: nil, &block)
     service.open(
       key,
-      checksum: checksum,
+      checksum: checksum&.digest,
+      checksum_algorithm: checksum&.algorithm,
       verify: !composed,
       name: [ "ActiveStorage-#{id}-", filename.extension_with_delimiter ],
       tmpdir: tmpdir,

@@ -18,10 +18,10 @@ module ActiveStorage
       @public = public
     end
 
-    def upload(key, io, checksum: nil, **)
+    def upload(key, io, checksum: nil, checksum_algorithm: :MD5, **)
       instrument :upload, key: key, checksum: checksum do
         IO.copy_stream(io, make_path_for(key))
-        ensure_integrity_of(key, checksum) if checksum
+        ensure_integrity_of(key, checksum, checksum_algorithm) if checksum
       end
     end
 
@@ -74,7 +74,7 @@ module ActiveStorage
       end
     end
 
-    def url_for_direct_upload(key, expires_in:, content_type:, content_length:, checksum:, custom_metadata: {})
+    def url_for_direct_upload(key, expires_in:, content_type:, content_length:, checksum:, checksum_algorithm: :MD5, custom_metadata: {})
       instrument :url, key: key do |payload|
         verified_token_with_expiration = ActiveStorage.verifier.generate(
           {
@@ -82,6 +82,7 @@ module ActiveStorage
             content_type: content_type,
             content_length: content_length,
             checksum: checksum,
+            checksum_algorithm: checksum_algorithm,
             service_name: name
           },
           expires_in: expires_in,
@@ -160,8 +161,8 @@ module ActiveStorage
         path_for(key).tap { |path| FileUtils.mkdir_p File.dirname(path) }
       end
 
-      def ensure_integrity_of(key, checksum)
-        unless file(path_for(key)) == checksum
+      def ensure_integrity_of(key, checksum, checksum_algorithm)
+        unless file(path_for(key)) == ActiveStorage::Checksum.new(checksum, checksum_algorithm)
           delete key
           raise ActiveStorage::IntegrityError
         end

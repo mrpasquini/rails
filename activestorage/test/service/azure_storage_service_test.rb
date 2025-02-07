@@ -14,12 +14,12 @@ if SERVICE_CONFIGURATIONS[:azure]
       data         = "Something else entirely!"
       checksum     = @service.base64digest(data)
       content_type = "text/xml"
-      url          = @service.url_for_direct_upload(key, expires_in: 5.minutes, content_type: content_type, content_length: data.size, checksum: checksum)
+      url          = @service.url_for_direct_upload(key, expires_in: 5.minutes, content_type: content_type, content_length: data.size, checksum: checksum.digest, checksum_algorithm: checksum.algorithm)
 
       uri = URI.parse url
       request = Net::HTTP::Put.new uri.request_uri
       request.body = data
-      @service.headers_for_direct_upload(key, checksum: checksum, content_type: content_type, filename: ActiveStorage::Filename.new("test.txt")).each do |k, v|
+      @service.headers_for_direct_upload(key, checksum: checksum.digest, checksum_algorithm: checksum.algorithm, content_type: content_type, filename: ActiveStorage::Filename.new("test.txt")).each do |k, v|
         request.add_field k, v
       end
       Net::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|
@@ -35,12 +35,12 @@ if SERVICE_CONFIGURATIONS[:azure]
       key      = SecureRandom.base58(24)
       data     = "Something else entirely!"
       checksum = @service.base64digest(data)
-      url      = @service.url_for_direct_upload(key, expires_in: 5.minutes, content_type: "text/plain", content_length: data.size, checksum: checksum)
+      url      = @service.url_for_direct_upload(key, expires_in: 5.minutes, content_type: "text/plain", content_length: data.size, checksum: checksum.digest, checksum_algorithm: checksum.algorithm)
 
       uri = URI.parse url
       request = Net::HTTP::Put.new uri.request_uri
       request.body = data
-      @service.headers_for_direct_upload(key, checksum: checksum, content_type: "text/plain", filename: ActiveStorage::Filename.new("test.txt"), disposition: :attachment).each do |k, v|
+      @service.headers_for_direct_upload(key, checksum: checksum.digest, checksum_algorithm: checksum.algorithm, content_type: "text/plain", filename: ActiveStorage::Filename.new("test.txt"), disposition: :attachment).each do |k, v|
         request.add_field k, v
       end
       Net::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|

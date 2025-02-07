@@ -68,7 +68,7 @@ module ActiveStorage
 
     # Upload the +io+ to the +key+ specified. If a +checksum+ is provided, the service will
     # ensure a match when the upload has completed or raise an ActiveStorage::IntegrityError.
-    def upload(key, io, checksum: nil, **options)
+    def upload(key, io, checksum: nil, checksum_algorithm: default_checksum_algorithm, **options)
       raise NotImplementedError
     end
 
@@ -135,12 +135,12 @@ module ActiveStorage
     # The URL will be valid for the amount of seconds specified in +expires_in+.
     # You must also provide the +content_type+, +content_length+, and +checksum+ of the file
     # that will be uploaded. All these attributes will be validated by the service upon upload.
-    def url_for_direct_upload(key, expires_in:, content_type:, content_length:, checksum:, custom_metadata: {})
+    def url_for_direct_upload(key, expires_in:, content_type:, content_length:, checksum:, checksum_algorithm: default_checksum_algorithm, custom_metadata: {})
       raise NotImplementedError
     end
 
     # Returns a Hash of headers for +url_for_direct_upload+ requests.
-    def headers_for_direct_upload(key, filename:, content_type:, content_length:, checksum:, custom_metadata: {})
+    def headers_for_direct_upload(key, filename:, content_type:, content_length:, checksum:, checksum_algorithm: default_checksum_algorithm, custom_metadata: {})
       {}
     end
 
@@ -149,17 +149,17 @@ module ActiveStorage
     end
 
     def base64digest(io)
-      checksum_implementation.base64digest(io)
+      ActiveStorage::Checksum.new(checksum_implementation.base64digest(io), default_checksum_algorithm)
     end
 
     def file(file)
-      checksum_implementation.file(file).base64digest
+      ActiveStorage::Checksum.new(checksum_implementation.file(file).base64digest, default_checksum_algorithm)
     end
 
     def compute_checksum_in_chunks(io)
       raise ArgumentError, "io must be rewindable" unless io.respond_to?(:rewind)
 
-      checksum_implementation.new.tap do |checksum|
+      digest = checksum_implementation(default_checksum_algorithm).new.tap do |checksum|
         read_buffer = "".b
         while io.read(5.megabytes, read_buffer)
           checksum << read_buffer
@@ -167,9 +167,16 @@ module ActiveStorage
 
         io.rewind
       end.base64digest
+
+      ActiveStorage::Checksum.new(digest, default_checksum_algorithm)
     end
 
-    def checksum_implementation
+    def default_checksum_algorithm
+      :MD5
+    end
+
+    def checksum_implementation(algorithm = default_checksum_algorithm)
+      # if algorithm == :MD5
       ActiveStorage.checksum_implementation
     end
 

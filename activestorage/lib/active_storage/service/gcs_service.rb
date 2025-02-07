@@ -89,7 +89,7 @@ module ActiveStorage
       end
     end
 
-    def url_for_direct_upload(key, expires_in:, checksum:, custom_metadata: {}, **)
+    def url_for_direct_upload(key, expires_in:, checksum:, checksum_algorithm: :MD5, custom_metadata: {}, **)
       instrument :url, key: key do |payload|
         headers = {}
         version = :v2
@@ -125,7 +125,7 @@ module ActiveStorage
       end
     end
 
-    def headers_for_direct_upload(key, checksum:, filename: nil, disposition: nil, custom_metadata: {}, **)
+    def headers_for_direct_upload(key, checksum:, checksum_algorithm: :MD5, filename: nil, disposition: nil, custom_metadata: {}, **)
       content_disposition = content_disposition_with(type: disposition, filename: filename) if filename
 
       headers = { "Content-MD5" => checksum, "Content-Disposition" => content_disposition, **custom_metadata_headers(custom_metadata) }

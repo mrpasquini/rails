@@ -32,7 +32,7 @@ class ActiveStorage::Service::MirrorServiceTest < ActiveSupport::TestCase
     checksum = @service.base64digest(data)
 
     assert_performed_jobs 1, only: ActiveStorage::MirrorJob do
-      @service.upload key, io.tap(&:read), checksum: checksum
+      @service.upload key, io.tap(&:read), checksum: checksum.digest, checksum_algorithm: checksum.algorithm
     end
 
     assert_predicate io, :eof?
@@ -51,7 +51,7 @@ class ActiveStorage::Service::MirrorServiceTest < ActiveSupport::TestCase
     data     = "Something else entirely!"
     checksum = @service.base64digest(data)
 
-    @service.primary.upload key, StringIO.new(data), checksum: checksum
+    @service.primary.upload key, StringIO.new(data), checksum: checksum.digest, checksum_algorithm: checksum.algorithm
 
     assert_equal data, @service.download(key)
   end
@@ -70,10 +70,10 @@ class ActiveStorage::Service::MirrorServiceTest < ActiveSupport::TestCase
     data     = "Something else entirely!"
     checksum = @service.base64digest(data)
 
-    @service.primary.upload key, StringIO.new(data), checksum: checksum
+    @service.primary.upload key, StringIO.new(data), checksum: checksum.digest, checksum_algorithm: checksum.algorithm
     @service.mirrors.third.upload key, StringIO.new("Surprise!")
 
-    @service.mirror key, checksum: checksum
+    @service.mirror key, checksum: checksum.digest, checksum_algorithm: checksum.algorithm
     assert_equal data, @service.mirrors.first.download(key)
     assert_equal data, @service.mirrors.second.download(key)
     assert_equal "Surprise!", @service.mirrors.third.download(key)

@@ -22,7 +22,8 @@ module ActiveStorage::Service::SharedServiceTests
     test "uploading with integrity" do
       key  = SecureRandom.base58(24)
       data = "Something else entirely!"
-      @service.upload(key, StringIO.new(data), checksum: @service.base64digest(data))
+      checksum = @service.base64digest(data)
+      @service.upload(key, StringIO.new(data), checksum: checksum.digest, checksum_algorithm: checksum.algorithm)
 
       assert_equal data, @service.download(key)
     ensure
@@ -34,7 +35,8 @@ module ActiveStorage::Service::SharedServiceTests
       data = "Something else entirely!"
 
       assert_raises(ActiveStorage::IntegrityError) do
-        @service.upload(key, StringIO.new(data), checksum: @service.base64digest("bad data"))
+        checksum = @service.base64digest("bad data")
+        @service.upload(key, StringIO.new(data), checksum: checksum.digest, checksum_algorithm: checksum.algorithm)
       end
 
       assert_not @service.exist?(key)
@@ -45,10 +47,12 @@ module ActiveStorage::Service::SharedServiceTests
     test "uploading with integrity and multiple keys" do
       key  = SecureRandom.base58(24)
       data = "Something else entirely!"
+      checksum = @service.base64digest(data)
       @service.upload(
         key,
         StringIO.new(data),
-        checksum: @service.base64digest(data),
+        checksum: checksum.digest,
+        checksum_algorithm: checksum.algorithm,
         filename: "racecar.jpg",
         content_type: "image/jpeg"
       )
@@ -143,10 +147,12 @@ module ActiveStorage::Service::SharedServiceTests
       keys = 3.times.map { SecureRandom.base58(24) }
       data = %w(To get her)
       keys.zip(data).each do |key, data|
+        checksum = @service.base64digest(data)
         @service.upload(
           key,
           StringIO.new(data),
-          checksum: @service.base64digest(data),
+          checksum: checksum.digest,
+          checksum_algorithm: checksum.algorithm,
           disposition: :attachment,
           filename: ActiveStorage::Filename.new("test.html"),
           content_type: "text/html",
