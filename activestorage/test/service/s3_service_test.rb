@@ -19,12 +19,17 @@ if SERVICE_CONFIGURATIONS[:s3]
       data     = "Something else entirely!"
       checksum = @service.base64digest(data)
       url      = @service.url_for_direct_upload(key, expires_in: 5.minutes, content_type: "text/plain", content_length: data.size, checksum: checksum)
+      algorithm = @service.default_digest_algorithm
 
       uri = URI.parse url
       request = Net::HTTP::Put.new uri.request_uri
       request.body = data
       request.add_field "Content-Type", "text/plain"
-      request.add_field "Content-MD5", checksum
+      if algorithm == :MD5
+        request.add_field "Content-MD5", checksum
+      else
+        request.add_field "x-amz-checksum-#{algorithm.downcase}", checksum
+      end
       Net::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|
         http.request request
       end
@@ -34,11 +39,39 @@ if SERVICE_CONFIGURATIONS[:s3]
       @service.delete key
     end
 
+    test "direct upload with SHA256 checksum" do
+      algorithm = :SHA256
+      service = build_service(default_digest_algorithm: algorithm)
+
+      key      = SecureRandom.base58(24)
+      data     = "Something else entirely!"
+
+      checksum = service.base64digest(data)
+
+
+      url      = service.url_for_direct_upload(key, expires_in: 5.minutes, content_type: "text/plain", content_length: data.size, checksum: checksum)
+
+      uri = URI.parse url
+      request = Net::HTTP::Put.new uri.request_uri
+      request.body = data
+      request.add_field "Content-Type", "text/plain"
+      request.add_field "x-amz-checksum-#{algorithm.downcase}", checksum
+      Net::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|
+        http.request request
+      end
+
+      assert_equal :SHA256, algorithm
+      assert_equal checksum, service.base64digest(service.download(key))
+    ensure
+      service.delete key
+    end
+
     test "direct upload with content disposition" do
       key      = SecureRandom.base58(24)
       data     = "Something else entirely!"
       checksum = @service.base64digest(data)
       url      = @service.url_for_direct_upload(key, expires_in: 5.minutes, content_type: "text/plain", content_length: data.size, checksum: checksum)
+      algorithm = @service.default_digest_algorithm
 
       uri = URI.parse url
       request = Net::HTTP::Put.new uri.request_uri
@@ -60,6 +93,7 @@ if SERVICE_CONFIGURATIONS[:s3]
       data     = "Some text that is longer than the specified content length"
       checksum = @service.base64digest(data)
       url      = @service.url_for_direct_upload(key, expires_in: 5.minutes, content_type: "text/plain", content_length: data.size - 1, checksum: checksum)
+      algorithm = @service.default_digest_algorithm
 
       uri = URI.parse url
       request = Net::HTTP::Put.new uri.request_uri
@@ -162,6 +196,27 @@ if SERVICE_CONFIGURATIONS[:s3]
       @service.delete key
     end
 
+    test "upload with unsupported checksum" do
+      assert_raises(ActiveStorage::UnsupportedChecksumError) { build_service(default_digest_algorithm: :UnknownHashingFunction) }
+    end
+
+    test "upload with SHA256 checksum" do
+      algorithm = :SHA256
+      service = build_service(default_digest_algorithm: algorithm)
+
+      begin
+        key  = SecureRandom.base58(24)
+        data = "Something else entirely!"
+        checksum = service.base64digest(data)
+
+        service.upload key, StringIO.new(data), checksum: checksum
+
+        assert_equal :SHA256, algorithm
+        assert_equal checksum, service.base64digest(service.download(key))
+      ensure
+        service.delete key
+      end
+    end
     test "uploading a large object in multiple parts" do
       service = build_service(upload: { multipart_threshold: 5.megabytes })
 

@@ -36,13 +36,19 @@ if SERVICE_CONFIGURATIONS[:s3_public]
       key      = SecureRandom.base58(24)
       data     = "Something else entirely!"
       checksum = @service.base64digest(data)
+      algorithm = @service.checksum_implementation
       url      = @service.url_for_direct_upload(key, expires_in: 5.minutes, content_type: "text/plain", content_length: data.size, checksum: checksum)
 
       uri = URI.parse url
       request = Net::HTTP::Put.new uri.request_uri
       request.body = data
       request.add_field "Content-Type", "text/plain"
-      request.add_field "Content-MD5", checksum
+      if algorithm == :MD5
+        request.add_field "Content-MD5", checksum
+      else
+        request.add_field "x-amz-checksum-#{algorithm.downcase}", checksum
+      end
+
       Net::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|
         http.request request
       end
