@@ -22,7 +22,7 @@ class ActiveStorage::DiskController < ActiveStorage::BaseController
   def update
     if token = decode_verified_token
       if acceptable_content?(token)
-        named_disk_service(token[:service_name]).upload token[:key], request.body, checksum: token[:checksum]
+        named_disk_service(token[:service_name]).upload token[:key], request.body, checksum: token[:checksum], checksum_algorithm: token[:checksum_algorithm]
         head :no_content
       else
         head :unprocessable_entity

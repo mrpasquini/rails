@@ -18,8 +18,8 @@ if SERVICE_CONFIGURATIONS[:s3]
       key      = SecureRandom.base58(24)
       data     = "Something else entirely!"
       checksum = @service.base64digest(data)
-      url      = @service.url_for_direct_upload(key, expires_in: 5.minutes, content_type: "text/plain", content_length: data.size, checksum: checksum)
       algorithm = @service.default_digest_algorithm
+      url      = @service.url_for_direct_upload(key, expires_in: 5.minutes, content_type: "text/plain", content_length: data.size, checksum: checksum, checksum_algorithm: algorithm)
 
       uri = URI.parse url
       request = Net::HTTP::Put.new uri.request_uri
@@ -49,7 +49,7 @@ if SERVICE_CONFIGURATIONS[:s3]
       checksum = service.base64digest(data)
 
 
-      url      = service.url_for_direct_upload(key, expires_in: 5.minutes, content_type: "text/plain", content_length: data.size, checksum: checksum)
+      url      = service.url_for_direct_upload(key, expires_in: 5.minutes, content_type: "text/plain", content_length: data.size, checksum: checksum, checksum_algorithm: algorithm)
 
       uri = URI.parse url
       request = Net::HTTP::Put.new uri.request_uri
@@ -70,8 +70,8 @@ if SERVICE_CONFIGURATIONS[:s3]
       key      = SecureRandom.base58(24)
       data     = "Something else entirely!"
       checksum = @service.base64digest(data)
-      url      = @service.url_for_direct_upload(key, expires_in: 5.minutes, content_type: "text/plain", content_length: data.size, checksum: checksum)
       algorithm = @service.default_digest_algorithm
+      url      = @service.url_for_direct_upload(key, expires_in: 5.minutes, content_type: "text/plain", content_length: data.size, checksum: checksum, checksum_algorithm: algorithm)
 
       uri = URI.parse url
       request = Net::HTTP::Put.new uri.request_uri
@@ -92,8 +92,8 @@ if SERVICE_CONFIGURATIONS[:s3]
       key      = SecureRandom.base58(24)
       data     = "Some text that is longer than the specified content length"
       checksum = @service.base64digest(data)
-      url      = @service.url_for_direct_upload(key, expires_in: 5.minutes, content_type: "text/plain", content_length: data.size - 1, checksum: checksum)
       algorithm = @service.default_digest_algorithm
+      url      = @service.url_for_direct_upload(key, expires_in: 5.minutes, content_type: "text/plain", content_length: data.size - 1, checksum: checksum, checksum_algorithm: algorithm)
 
       uri = URI.parse url
       request = Net::HTTP::Put.new uri.request_uri

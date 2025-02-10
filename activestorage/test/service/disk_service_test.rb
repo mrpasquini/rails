@@ -19,10 +19,10 @@ class ActiveStorage::Service::DiskServiceTest < ActiveSupport::TestCase
     key      = SecureRandom.base58(24)
     data     = "Something else entirely!"
     checksum = @service.base64digest(data)
-
+    algorithm = :MD5
     begin
       assert_match(/^https:\/\/example.com\/rails\/active_storage\/disk\/.*$/,
-        @service.url_for_direct_upload(key, expires_in: 5.minutes, content_type: "text/plain", content_length: data.size, checksum: checksum))
+        @service.url_for_direct_upload(key, expires_in: 5.minutes, content_type: "text/plain", content_length: data.size, checksum: checksum, checksum_algorithm: algorithm))
     ensure
       Rails.application.routes.default_url_options = original_url_options
     end

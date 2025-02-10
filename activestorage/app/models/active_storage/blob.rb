@@ -179,6 +179,33 @@ class ActiveStorage::Blob < ActiveStorage::Record
     ActiveStorage::Filename.new(self[:filename])
   end
 
+  def checksum=(digest, algorithm=:MD5)
+    if algorithm == :MD5
+      super(digest)
+    else
+      super("#{algorithm}:#{digest}")
+    end
+  end
+
+  def checksum(with_algorithm = false)
+    attr_value = super()
+    return attr_value if with_algorithm || attr_value.nil?
+
+    split_result = super().split(":")
+    return split_result[0] if split_result.count == 1
+    split_result[1]
+  end
+
+  def checksum_algorithm
+    return unless checksum
+    split_result = checksum(true).split(":")
+    if split_result.count == 2
+      split_result.unshift
+    else
+      :MD5
+    end
+  end
+
   def custom_metadata
     self[:metadata][:custom] || {}
   end
@@ -219,12 +246,12 @@ class ActiveStorage::Blob < ActiveStorage::Record
   # Returns a URL that can be used to directly upload a file for this blob on the service. This URL is intended to be
   # short-lived for security and only generated on-demand by the client-side JavaScript responsible for doing the uploading.
   def service_url_for_direct_upload(expires_in: ActiveStorage.service_urls_expire_in)
-    service.url_for_direct_upload key, expires_in: expires_in, content_type: content_type, content_length: byte_size, checksum: checksum, custom_metadata: custom_metadata
+    service.url_for_direct_upload key, expires_in: expires_in, content_type: content_type, content_length: byte_size, checksum: checksum, checksum_algorithm: checksum_algorithm, custom_metadata: custom_metadata
   end
 
   # Returns a Hash of headers for +service_url_for_direct_upload+ requests.
   def service_headers_for_direct_upload
-    service.headers_for_direct_upload key, filename: filename, content_type: content_type, content_length: byte_size, checksum: checksum, custom_metadata: custom_metadata
+    service.headers_for_direct_upload key, filename: filename, content_type: content_type, content_length: byte_size, checksum: checksum, checksum_algorithm: checksum_algorithm, custom_metadata: custom_metadata
   end
 
 
@@ -253,7 +280,7 @@ class ActiveStorage::Blob < ActiveStorage::Record
   end
 
   def upload_without_unfurling(io) # :nodoc:
-    service.upload key, io, checksum: checksum, **service_metadata
+    service.upload key, io, checksum: checksum, checksum_algorithm: checksum_algorithm, **service_metadata
   end
 
   def compose(keys) # :nodoc:
@@ -297,7 +324,7 @@ class ActiveStorage::Blob < ActiveStorage::Record
   end
 
   def mirror_later # :nodoc:
-    service.mirror_later key, checksum: checksum if service.respond_to?(:mirror_later)
+    service.mirror_later key, checksum: checksum, checksum_algorithm: checksum_algorithm if service.respond_to?(:mirror_later)
   end
 
   # Deletes the files on the service associated with the blob. This should only be done if the blob is going to be

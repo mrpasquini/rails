@@ -69,11 +69,12 @@ class ActiveStorage::Service::MirrorServiceTest < ActiveSupport::TestCase
     key      = SecureRandom.base58(24)
     data     = "Something else entirely!"
     checksum = @service.base64digest(data)
+    algorithm = :MD5
 
     @service.primary.upload key, StringIO.new(data), checksum: checksum
     @service.mirrors.third.upload key, StringIO.new("Surprise!")
 
-    @service.mirror key, checksum: checksum
+    @service.mirror key, checksum: checksum, checksum_algorithm: algorithm
     assert_equal data, @service.mirrors.first.download(key)
     assert_equal data, @service.mirrors.second.download(key)
     assert_equal "Surprise!", @service.mirrors.third.download(key)
